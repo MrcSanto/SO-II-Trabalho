@@ -1,7 +1,8 @@
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 import tkinter as tk
 from tkinter import messagebox
 from PIL import ImageTk
+import random
 
 class SimulatorApp:
     def __init__(self, root):
@@ -29,7 +30,7 @@ class SimulatorApp:
         self.disk_size_entry = tk.Entry(sidebar)
         self.disk_size_entry.pack(pady=5, anchor="w", padx=10)
         tk.Label(sidebar, text="Máximo de blocos: 512", bg="lightgray", fg="red").pack(pady=(0, 5), anchor="w", padx=10)
-        
+                
         tk.Label(sidebar, text="Tamanho do Arquivo (blocos):", bg="lightgray").pack(pady=5, anchor="w", padx=10)
         self.file_size_entry = tk.Entry(sidebar)
         self.file_size_entry.pack(pady=5, anchor="w", padx=10)
@@ -41,9 +42,8 @@ class SimulatorApp:
         tk.Radiobutton(sidebar, text="Encadeada", variable=self.allocation_type, value="Encadeada", bg="lightgray").pack(pady=5, anchor="w", padx=10)
         tk.Radiobutton(sidebar, text="Indexada", variable=self.allocation_type, value="Indexada", bg="lightgray").pack(pady=5, anchor="w", padx=10)
 
-        tk.Button(sidebar, text="Criar Arquivo", command=self.create_file).pack(side=tk.BOTTOM, pady=10, anchor="s")
-        tk.Button(sidebar, text="Remover Arquivo", command=self.delete_file).pack(side=tk.BOTTOM, pady=10, anchor="s")
-        tk.Button(sidebar, text="Visualizar Disco", command=self.show_disk).pack(side=tk.BOTTOM, pady=10, anchor="s")
+        # Botão único para criar o disco e visualizar
+        tk.Button(sidebar, text="Criar Disco", command=self.show_disk).pack(side=tk.BOTTOM, pady=10, anchor="s")
 
     def setup_canvas(self):
         # Frame para o Canvas que vai receber a barra de rolagem
@@ -100,7 +100,17 @@ class SimulatorApp:
             image = Image.new("RGB", (width, height), "white")
             draw = ImageDraw.Draw(image)
 
-            # Desenhar os blocos e adicionar o texto "free"
+            # Configurar fonte para os números (ajustar tamanho conforme necessário)
+            try:
+                font = ImageFont.truetype("arial.ttf", size=14)  # Tente usar uma fonte específica
+            except IOError:
+                font = ImageFont.load_default()  # Fallback para fonte padrão
+
+            # Gerar uma lista de índices aleatórios para pintar de preto
+            num_black_blocks = max(1, num_blocks // 10)  # 10% dos blocos serão pretos
+            black_blocks = random.sample(range(num_blocks), num_black_blocks)
+
+            # Desenhar os blocos e adicionar os números de identificação
             for i in range(num_blocks):
                 row, col = divmod(i, blocks_per_row)
                 x0 = col * (block_size + margin) + margin
@@ -108,8 +118,16 @@ class SimulatorApp:
                 x1 = x0 + block_size
                 y1 = y0 + block_size
 
+                # Definir a cor do bloco
+                fill_color = "black" if i in black_blocks else "skyblue"
+
                 # Desenhar o bloco
-                draw.rectangle([x0, y0, x1, y1], fill="skyblue", outline="black")
+                draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
+
+                # Adicionar o número de identificação ao lado direito do bloco
+                text_x = x1 + 10  # Posição x (10 pixels à direita do bloco)
+                text_y = y0 + (block_size // 2) - 7  # Centralizar o texto verticalmente
+                draw.text((text_x, text_y), str(i), fill="black", font=font)
 
             # Salvar a imagem no atributo para exibir no Canvas
             self.tk_image = ImageTk.PhotoImage(image)
@@ -132,15 +150,7 @@ class SimulatorApp:
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
-
-    def create_file(self):
-        # Lógica para criar arquivo com a estratégia de alocação escolhida
-        pass
-
-    def delete_file(self):
-        # Lógica para remover arquivo
-        pass
-
+            
     def show_disk(self):
         if self.disk_size_entry.get() == '':
             return
