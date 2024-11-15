@@ -100,7 +100,7 @@ class SimulatorApp:
             image = Image.new("RGB", (width, height), "white")
             draw = ImageDraw.Draw(image)
 
-            # Configurar fonte para os números
+            # Configurar fonte para os números e o texto
             try:
                 font = ImageFont.truetype("arial.ttf", size=14)
             except IOError:
@@ -150,15 +150,29 @@ class SimulatorApp:
                 y1 = y0 + block_size
 
                 # Cor do bloco
-                fill_color = "black" if i in used_blocks else "skyblue"
+                fill_color = "firebrick" if i in used_blocks else "skyblue"
+                text = "Alocado" if i in used_blocks else "Livre"
 
                 # Desenhar o bloco
                 draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
 
-                # Adicionar o número de identificação ao lado do bloco
-                text_x = x1 + 10
-                text_y = y0 + (block_size // 2) - 7
-                draw.text((text_x, text_y), str(i), fill="black", font=font)
+                # Adicionar número identificador no topo do bloco
+                block_id_text = str(i + 1)  # Número identificador (i + 1 para começar de 1)
+                block_id_bbox = draw.textbbox((0, 0), block_id_text, font=font)  # Pega a caixa delimitadora do texto
+                block_id_width = block_id_bbox[2] - block_id_bbox[0]
+                block_id_x = x0 + (block_size - block_id_width) // 2  # Centralizar horizontalmente
+                block_id_y = y0 + 5  # Colocar no topo do bloco
+
+                draw.text((block_id_x, block_id_y), block_id_text, fill="black", font=font)
+
+                # Adicionar o status (Livre ou Alocado) centralizado
+                text_bbox = draw.textbbox((0, 0), text, font=font)  # Pega a caixa delimitadora do texto
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+                text_x = x0 + (block_size - text_width) // 2  # Centralizar horizontalmente
+                text_y = y0 + (block_size - text_height) // 2  # Centralizar verticalmente
+
+                draw.text((text_x, text_y), text, fill="black", font=font)
 
             # Salvar a imagem no atributo para exibir no Canvas
             self.tk_image = ImageTk.PhotoImage(image)
