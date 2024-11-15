@@ -100,17 +100,48 @@ class SimulatorApp:
             image = Image.new("RGB", (width, height), "white")
             draw = ImageDraw.Draw(image)
 
-            # Configurar fonte para os números (ajustar tamanho conforme necessário)
+            # Configurar fonte para os números
             try:
-                font = ImageFont.truetype("arial.ttf", size=14)  # Tente usar uma fonte específica
+                font = ImageFont.truetype("arial.ttf", size=14)
             except IOError:
-                font = ImageFont.load_default()  # Fallback para fonte padrão
+                font = ImageFont.load_default()
 
-            # Gerar uma lista de índices aleatórios para pintar de preto
-            num_black_blocks = max(1, num_blocks // 10)  # 10% dos blocos serão pretos
-            black_blocks = random.sample(range(num_blocks), num_black_blocks)
+            # Inicializar lista para acompanhar os blocos usados
+            used_blocks = set()
 
-            # Desenhar os blocos e adicionar os números de identificação
+            # Aumentar o número de blocos alocados para 30% ou mais
+            total_files = num_blocks // 5  # Alocar aproximadamente 20% a 30% dos blocos para arquivos
+
+            for _ in range(total_files):
+                start_block = random.randint(0, num_blocks - 1)
+
+                # Ignorar se o bloco inicial já está ocupado
+                if start_block in used_blocks:
+                    continue
+
+                # Determinar tamanho do arquivo (3 a 10 blocos)
+                file_size = random.randint(3, 10)
+
+                # Verificar se o arquivo pode ser alocado sem ultrapassar os limites
+                allocated_blocks = []
+                for i in range(file_size):
+                    current_block = start_block + i
+
+                    # Quebrar a linha caso ultrapasse o limite da linha atual
+                    if current_block % blocks_per_row < start_block % blocks_per_row:
+                        break
+
+                    # Adicionar o bloco se ainda não estiver ocupado
+                    if current_block < num_blocks and current_block not in used_blocks:
+                        allocated_blocks.append(current_block)
+                    else:
+                        break
+
+                # Se o arquivo couber nos blocos selecionados
+                if len(allocated_blocks) == file_size:
+                    used_blocks.update(allocated_blocks)
+
+            # Desenhar os blocos na imagem
             for i in range(num_blocks):
                 row, col = divmod(i, blocks_per_row)
                 x0 = col * (block_size + margin) + margin
@@ -118,15 +149,15 @@ class SimulatorApp:
                 x1 = x0 + block_size
                 y1 = y0 + block_size
 
-                # Definir a cor do bloco
-                fill_color = "black" if i in black_blocks else "skyblue"
+                # Cor do bloco
+                fill_color = "black" if i in used_blocks else "skyblue"
 
                 # Desenhar o bloco
                 draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
 
-                # Adicionar o número de identificação ao lado direito do bloco
-                text_x = x1 + 10  # Posição x (10 pixels à direita do bloco)
-                text_y = y0 + (block_size // 2) - 7  # Centralizar o texto verticalmente
+                # Adicionar o número de identificação ao lado do bloco
+                text_x = x1 + 10
+                text_y = y0 + (block_size // 2) - 7
                 draw.text((text_x, text_y), str(i), fill="black", font=font)
 
             # Salvar a imagem no atributo para exibir no Canvas
@@ -150,7 +181,7 @@ class SimulatorApp:
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
-            
+
     def show_disk(self):
         if self.disk_size_entry.get() == '':
             return
