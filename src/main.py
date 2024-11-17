@@ -22,6 +22,9 @@ class SimulatorApp:
         # Variável para armazenar o status dos blocos
         self.block_status = []
 
+        # Variável para armazenar as setas entre os blocos alocados (apenas para alocação encadeada)
+        self.arrows = []
+
     def setup_sidebar(self):
         # Frame para a barra lateral
         sidebar = tk.Frame(self.root, width=300, bg="lightgray")
@@ -194,10 +197,15 @@ class SimulatorApp:
             # Atualizar a barra de rolagem
             self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
+            # Desenhar as setas armazenadas
+            for arrow in self.arrows:
+                self.desenhar_seta(*arrow)
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
 
     def show_disk(self):
+        self.clear_canvas()
         if self.disk_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do disco.")
             return
@@ -220,6 +228,8 @@ class SimulatorApp:
             if file_size <= 0:
                 raise ValueError("O tamanho do arquivo deve ser maior que zero.")
 
+            self.current_allocation_color = "#%06x" % random.randint(0x000000, 0xFFFFFF)
+
             if self.allocation_type.get() == "Contígua":
                 self.allocate_contiguous(file_size)
             elif self.allocation_type.get() == "Encadeada":
@@ -237,7 +247,7 @@ class SimulatorApp:
             if all(free_blocks[j] == free_blocks[i] + j for j in range(file_size)):
                 # Alocar os blocos contíguos encontrados
                 for j in range(file_size):
-                    self.block_status[free_blocks[i] + j] = "allocated"
+                    self.block_status[free_blocks[i] + j] = self.current_allocation_color
                 self.update_disk_image()
                 return
 
@@ -252,10 +262,30 @@ class SimulatorApp:
             return
 
         allocated_blocks = random.sample(free_blocks, file_size)
-        for block in allocated_blocks:
-            self.block_status[block] = "allocated"
+        self.arrows = []  # Limpar setas anteriores
+
+        for i in range(len(allocated_blocks) - 1):
+            self.block_status[allocated_blocks[i]] = self.current_allocation_color
+            # Armazenar seta para ser desenhada posteriormente
+            self.arrows.append((allocated_blocks[i], allocated_blocks[i + 1], self.block_size, self.block_size, self.margin, self.blocks_per_row, self.current_allocation_color))
+
+        # Marcar o último bloco
+        self.block_status[allocated_blocks[-1]] = self.current_allocation_color
 
         self.update_disk_image()
+
+    def desenhar_seta(self, bloco_origem, bloco_destino, largura_bloco, altura_bloco, espaco, blocos_por_linha, cor):
+        linha_origem = bloco_origem // blocos_por_linha
+        coluna_origem = bloco_origem % blocos_por_linha
+        x1 = coluna_origem * (largura_bloco + espaco) + espaco + largura_bloco / 2
+        y1 = linha_origem * (altura_bloco + espaco) + espaco + altura_bloco / 2
+
+        linha_destino = bloco_destino // blocos_por_linha
+        coluna_destino = bloco_destino % blocos_por_linha
+        x2 = coluna_destino * (largura_bloco + espaco) + espaco + largura_bloco / 2
+        y2 = linha_destino * (altura_bloco + espaco) + espaco + altura_bloco / 2
+
+        self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, fill=cor, width=4)
 
     def allocate_indexed(self, file_size):
         # Utiliza um bloco índice que aponta para outros blocos livres
@@ -268,9 +298,9 @@ class SimulatorApp:
         index_block = free_blocks.pop(0)  # Primeiro bloco será o índice
         allocated_blocks = random.sample(free_blocks, file_size)
 
-        self.block_status[index_block] = "allocated"
+        self.block_status[index_block] = self.current_allocation_color
         for block in allocated_blocks:
-            self.block_status[block] = "allocated"
+            self.block_status[block] = self.current_allocation_color
 
         self.update_disk_image()
 
@@ -299,8 +329,8 @@ class SimulatorApp:
             x1 = x0 + self.block_size
             y1 = y0 + self.block_size
 
-            if self.block_status[i] == "allocated":
-                fill_color = "yellow"
+            if isinstance(self.block_status[i], str):  # Bloco alocado com cor especificada
+                fill_color = self.block_status[i]
                 text = "Alocado"
             else:
                 fill_color = "firebrick" if self.block_status[i] else "skyblue"
@@ -339,11 +369,16 @@ class SimulatorApp:
         # Atualizar a barra de rolagem
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
+        # Desenhar as setas armazenadas
+        for arrow in self.arrows:
+            self.desenhar_seta(*arrow)
+
     def clear_canvas(self):
         # Limpa o canvas e reseta o estado
         self.canvas.delete("all")
         self.tk_image = None
         self.block_status = []
+        self.arrows = []
 
 if __name__ == "__main__":
     root = tk.Tk()  
