@@ -4,6 +4,62 @@ from tkinter import messagebox
 from PIL import ImageTk
 import random
 
+class AlocationAlgorithms:
+    def __init__(self, list_blocks: list[bool]):
+        self.list_blocks = list_blocks
+    
+    def contigua(self, file_size : int) -> bool:
+        for i in range(len(self.list_blocks) - file_size + 1):
+            # Verifica se há espaço contíguo suficiente
+            if all(not self.list_blocks[j] for j in range(i, i + file_size)):
+                # Marca os blocos como ocupados
+                for j in range(i, i + file_size):
+                    self.list_blocks[j] = True
+            return True
+        return False
+    
+    def encadeada(self, file_size: int) -> list[int]:
+        allocated_blocks = []
+        for i, block in enumerate(self.list_blocks):
+            if not block:  # Bloco livre
+                allocated_blocks.append(i)
+                self.list_blocks[i] = True  # Marca o bloco como ocupado
+                if len(allocated_blocks) == file_size:
+                    return allocated_blocks
+        # Não foi possível alocar o arquivo
+        for i in allocated_blocks:  # Reverte a alocação parcial
+            self.list_blocks[i] = False
+        return []
+
+    def indexada(self, file_size: int) -> tuple[int, list[int]]:
+        index_block = -1
+        data_blocks = []
+        
+        # Encontrar o bloco de índice
+        for i, block in enumerate(self.list_blocks):
+            if not block:
+                index_block = i
+                self.list_blocks[i] = True  # Marca o bloco de índice como ocupado
+                break
+
+        if index_block == -1:
+            return ()  # Não há bloco de índice disponível
+
+        # Alocar blocos para os dados
+        for i, block in enumerate(self.list_blocks):
+            if not block and len(data_blocks) < file_size:
+                data_blocks.append(i)
+                self.list_blocks[i] = True
+
+        if len(data_blocks) < file_size:
+            # Reverter alocações se não houver blocos suficientes
+            self.list_blocks[index_block] = False
+            for i in data_blocks:
+                self.list_blocks[i] = False
+            return ()
+
+        return index_block, data_blocks
+
 class SimulatorApp:
     def __init__(self, root):
         self.root = root
@@ -35,7 +91,6 @@ class SimulatorApp:
         self.file_size_entry = tk.Entry(sidebar)
         self.file_size_entry.pack(pady=5, anchor="w", padx=10)
 
-
         tk.Label(sidebar, text="Métodos de Alocação:", bg="lightgray").pack(pady=5, anchor="w", padx=10)            
         self.allocation_type = tk.StringVar(value="Contígua")
         tk.Radiobutton(sidebar, text="Contígua", variable=self.allocation_type, value="Contígua", bg="lightgray").pack(pady=5, anchor="w", padx=10)
@@ -44,6 +99,8 @@ class SimulatorApp:
 
         # Botão único para criar o disco e visualizar
         tk.Button(sidebar, text="Criar Disco", command=self.show_disk).pack(side=tk.BOTTOM, pady=10, anchor="s")
+        tk.Button(sidebar, text="Criar Arquivo", command='').pack(side=tk.BOTTOM, pady=10, anchor="s")
+        tk.Button(sidebar, text="Limpar", command='').pack(side=tk.BOTTOM, pady=10, anchor="s")
 
     def setup_canvas(self):
         # Frame para o Canvas que vai receber a barra de rolagem
@@ -106,6 +163,9 @@ class SimulatorApp:
             except IOError:
                 font = ImageFont.load_default()
 
+            # Lista para guardar o status de cada bloco
+            block_status = [False] * num_blocks  # Inicialmente, todos os blocos estão livres
+
             # Inicializar lista para acompanhar os blocos usados
             used_blocks = set()
 
@@ -140,6 +200,8 @@ class SimulatorApp:
                 # Se o arquivo couber nos blocos selecionados
                 if len(allocated_blocks) == file_size:
                     used_blocks.update(allocated_blocks)
+                    for block in allocated_blocks:
+                        block_status[block] = True  # Marcar os blocos como ocupados
 
             # Desenhar os blocos na imagem
             for i in range(num_blocks):
@@ -150,8 +212,8 @@ class SimulatorApp:
                 y1 = y0 + block_size
 
                 # Cor do bloco
-                fill_color = "firebrick" if i in used_blocks else "skyblue"
-                text = "Alocado" if i in used_blocks else "Livre"
+                fill_color = "firebrick" if block_status[i] else "skyblue"
+                text = "Alocado" if block_status[i] else "Livre"
 
                 # Desenhar o bloco
                 draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
@@ -193,11 +255,15 @@ class SimulatorApp:
             # Atualizar a barra de rolagem
             self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
+            # Retornar a lista com o status dos blocos
+            return block_status
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
 
     def show_disk(self):
         if self.disk_size_entry.get() == '':
+            messagebox.showwarning("Atenção", "Informe o tamanho do disco.")
             return
 
         try:
