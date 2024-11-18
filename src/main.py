@@ -7,11 +7,7 @@ class SimulatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Alocação de Blocos Lógicos")
-        
-        # Obter as dimensões da tela
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        self.root.geometry(f"{screen_width}x{screen_height}")
+        self.root.geometry(f"1920x1080")
         
         # Criação da barra lateral
         self.setup_sidebar()
@@ -22,7 +18,7 @@ class SimulatorApp:
         # Variável para armazenar o status dos blocos
         self.block_status = []
 
-        # Variável para armazenar as setas entre os blocos alocados (apenas para alocação encadeada)
+        # Variável para armazenar as setas entre os blocos alocados
         self.arrows = []
 
     def setup_sidebar(self):
@@ -117,9 +113,9 @@ class SimulatorApp:
 
             # Inicializar lista para acompanhar os blocos usados
             used_blocks = set()
-
-            # Aumentar o número de blocos alocados para 30% ou mais
-            total_files = num_blocks // 5  # Alocar aproximadamente 20% a 30% dos blocos para arquivos
+            
+            # Alocar aproximadamente 20% a 30% dos blocos para arquivos
+            total_files = num_blocks // 5  
 
             for _ in range(total_files):
                 start_block = random.randint(0, num_blocks - 1)
@@ -165,8 +161,10 @@ class SimulatorApp:
                 text = "Alocado" if self.block_status[i] else "Livre"
 
                 # Desenhar o bloco
-                draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
-
+                if self.block_status[i]:
+                    draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black", width=3)
+                else:
+                    draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
                 # Adicionar número identificador no topo do bloco
                 block_id_text = str(i + 1)  # Número identificador (i + 1 para começar de 1)
                 block_id_bbox = draw.textbbox((0, 0), block_id_text, font=font)  # Pega a caixa delimitadora do texto
@@ -228,7 +226,10 @@ class SimulatorApp:
             if file_size <= 0:
                 raise ValueError("O tamanho do arquivo deve ser maior que zero.")
 
-            self.current_allocation_color = "#%06x" % random.randint(0x000000, 0xFFFFFF)
+            while True:
+                self.current_allocation_color = "#%06x" % random.randint(0x444444, 0xFFFFFF)
+                if self.current_allocation_color.lower() != '#000000':  # Garantir que a cor não seja preta
+                    break
 
             if self.allocation_type.get() == "Contígua":
                 self.allocate_contiguous(file_size)
@@ -243,13 +244,17 @@ class SimulatorApp:
         # Verifica os blocos livres e tenta alocar um segmento contíguo
         free_blocks = [i for i, status in enumerate(self.block_status) if not status]
 
-        for i in range(len(free_blocks) - file_size + 1):
-            if all(free_blocks[j] == free_blocks[i] + j for j in range(file_size)):
+        # Procurar por um espaço contíguo que possa alocar o arquivo
+        start_index = 0
+        while start_index <= len(free_blocks) - file_size:
+            contiguous_blocks = free_blocks[start_index:start_index + file_size]
+            if all(contiguous_blocks[i] == contiguous_blocks[0] + i for i in range(file_size)):
                 # Alocar os blocos contíguos encontrados
-                for j in range(file_size):
-                    self.block_status[free_blocks[i] + j] = self.current_allocation_color
+                for block in contiguous_blocks:
+                    self.block_status[block] = self.current_allocation_color
                 self.update_disk_image()
                 return
+            start_index += 1
 
         messagebox.showerror("Erro", "Não há blocos contíguos suficientes disponíveis para alocar o arquivo.")
 
@@ -262,12 +267,13 @@ class SimulatorApp:
             return
 
         allocated_blocks = random.sample(free_blocks, file_size)
-        self.arrows = []  # Limpar setas anteriores
+        # Manter as setas anteriores para que não desapareçam
+        self.arrows = []
 
         for i in range(len(allocated_blocks) - 1):
             self.block_status[allocated_blocks[i]] = self.current_allocation_color
             # Armazenar seta para ser desenhada posteriormente
-            self.arrows.append((allocated_blocks[i], allocated_blocks[i + 1], self.block_size, self.block_size, self.margin, self.blocks_per_row, self.current_allocation_color))
+            self.arrows.append((allocated_blocks[i], allocated_blocks[i + 1], self.block_size, self.block_size, self.margin, self.blocks_per_row, 'black'))
 
         # Marcar o último bloco
         self.block_status[allocated_blocks[-1]] = self.current_allocation_color
@@ -285,7 +291,25 @@ class SimulatorApp:
         x2 = coluna_destino * (largura_bloco + espaco) + espaco + largura_bloco / 2
         y2 = linha_destino * (altura_bloco + espaco) + espaco + altura_bloco / 2
 
-        self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, fill=cor, width=4)
+        # Ajustar as coordenadas para que as setas parem fora do bloco
+        ajuste_x = largura_bloco / 4
+        ajuste_y = altura_bloco / 4
+
+        if x1 < x2:
+            x1 += ajuste_x
+            x2 -= ajuste_x
+        elif x1 > x2:
+            x1 -= ajuste_x
+            x2 += ajuste_x
+
+        if y1 < y2:
+            y1 += ajuste_y
+            y2 -= ajuste_y
+        elif y1 > y2:
+            y1 -= ajuste_y
+            y2 += ajuste_y
+
+        self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, fill='black', width=4)
 
     def allocate_indexed(self, file_size):
         # Utiliza um bloco índice que aponta para outros blocos livres
@@ -298,13 +322,19 @@ class SimulatorApp:
         index_block = free_blocks.pop(0)  # Primeiro bloco será o índice
         allocated_blocks = random.sample(free_blocks, file_size)
 
-        self.block_status[index_block] = self.current_allocation_color
+        # Marcar o bloco índice com uma cor distinta
+        self.block_status[index_block] = "#FFD700"  # Dourado para destacar o índice
+
+        # Marcar os blocos alocados
         for block in allocated_blocks:
             self.block_status[block] = self.current_allocation_color
+            # Armazenar seta para indicar que o índice aponta para o bloco
+            self.arrows.append((index_block, block, self.block_size, self.block_size, self.margin, self.blocks_per_row, 'black'))
 
         self.update_disk_image()
 
     def update_disk_image(self):
+        # Manter as setas anteriores e atualizar a imagem
         # Atualiza a imagem do disco com o novo status dos blocos
         num_blocks = len(self.block_status)
         rows = (num_blocks + self.blocks_per_row - 1) // self.blocks_per_row
@@ -332,12 +362,14 @@ class SimulatorApp:
             if isinstance(self.block_status[i], str):  # Bloco alocado com cor especificada
                 fill_color = self.block_status[i]
                 text = "Alocado"
+                border_width = 4
             else:
                 fill_color = "firebrick" if self.block_status[i] else "skyblue"
                 text = "Alocado" if self.block_status[i] else "Livre"
+                border_width = 3 if self.block_status[i] else 1
 
             # Desenhar o bloco
-            draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black")
+            draw.rectangle([x0, y0, x1, y1], fill=fill_color, outline="black", width=border_width)
 
             # Adicionar número identificador no topo do bloco
             block_id_text = str(i + 1)  # Número identificador (i + 1 para começar de 1)
