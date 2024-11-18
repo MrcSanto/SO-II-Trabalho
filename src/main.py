@@ -7,7 +7,7 @@ class SimulatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Alocação de Blocos Lógicos")
-        self.root.geometry(f"1920x1080")
+        self.root.geometry(f"1366x768")
         
         # Criação da barra lateral
         self.setup_sidebar()
