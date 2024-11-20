@@ -1,40 +1,60 @@
-# Simulador de Alocação de Blocos Lógicos
+# Como Configurar e Rodar a Aplicação
 
-Este é um aplicativo em Python que simula diferentes métodos de alocação de blocos em sistemas de arquivos. Ele fornece uma interface gráfica para visualizar como arquivos são alocados em um disco virtual utilizando métodos de alocação contígua, encadeada e indexada.
+Siga os passos abaixo para configurar e executar o projeto:
 
-## Características
-- Interface Gráfica.
-- Métodos de Alocação:
-    - Contígua: Aloca blocos adjacentes.
-    - Encadeada: Aloca blocos não adjacentes, mantendo referências para o próximo bloco.
-    - Indexada: Utiliza um bloco índice que aponta para todos os blocos alocados.
-- Configuração de Dificuldade: Três níveis de dificuldade (Fácil, Médio, Difícil) que afetam a fragmentação do disco.
-- Visualização de Setas: Exibe setas indicando a sequência de alocação dos blocos.
-- Legenda de Cores: Ajuda a identificar os diferentes tipos de alocação e estados dos blocos.
+## 1. Abra o projeto e acesse sua pasta
+```bash
+$ cd caminho/para/o/projeto
+```
 
+## 2. Verifique se o Python 3 está instalado
+Certifique-se de que o Python 3 está disponível no sistema:
+```bash
+$ which python3
+```
+O comando deve retornar:
+```
+/usr/bin/python3
+```
 
-## Pré-requisitos
-- SO Linux
-- Python 3.9
-- Gerenciador de pacotes PIP
-- Tkinter *para interface gráfica*
-- Pillow *para manipular as imagens*
+## 3. Instale os pacotes necessários
+Instale os seguintes módulos para preparar o ambiente:
 
-## Instalação
-Siga os passos abaixo para configurar o ambiente e executar o aplicativo:
+### Módulo para criar ambientes virtuais
+```bash
+$ sudo apt-get install python3-venv
+```
 
-1. Instalar o Python 3.9
-    - Antes de tudo, verifique se você já tem o Python instalado:
+### Gerenciador de pacotes Python (pip)
+```bash
+$ sudo apt-get install python3-pip
+```
 
-    ```bash
-    $ which python3
-    /usr/bin/python3
-    ```
-    - Se a versão não for 3.9, siga os passos abaixo:
+### Tkinter - Biblioteca de interface gráfica para Python
+```bash
+$ sudo apt-get install python3-tk
+```
 
-    - Atualize o gerenciador de pacotes:
+## 4. Crie o ambiente virtual
+No diretório do projeto, crie o ambiente virtual:
+```bash
+$ python3 -m venv .venv
+```
 
-    ```bash
-    sudo apt update
-    sudo apt upgrade
-    ```
+## 5. Ative o ambiente virtual
+Ative o ambiente virtual criado:
+```bash
+$ source ./.venv/bin/activate
+```
+
+## 6. Instale as dependências
+Com o ambiente virtual ativado, instale os pacotes listados no arquivo `requirements.txt`:
+```bash
+$ pip install -r ./requirements.txt
+```
+
+## 7. Execute a aplicação
+Rode o aplicativo principal:
+```bash
+$ python3 ./src/main.py
+```
