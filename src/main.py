@@ -98,7 +98,7 @@ class SimuladorAlocacao:
         self.allocation_type = tk.StringVar(value="Contígua")
         tk.Radiobutton(
             sidebar,
-            text="Contígua",
+            text="Contígua (first-fit)",
             variable=self.allocation_type,
             value="Contígua",
             bg="lightgray"
@@ -477,21 +477,29 @@ class SimuladorAlocacao:
                 "Não há blocos suficientes disponíveis para alocar o arquivo."
             )
             return None
-        index_block = free_blocks.pop(0)
-        allocated_blocks = random.sample(free_blocks, file_size)
+        
+        # Seleciona o bloco índice e os blocos de dados
+        index_block = free_blocks.pop(0)  # Primeiro bloco é o índice
+        allocated_blocks = random.sample(free_blocks, file_size)  # Seleciona blocos para alocar
+
+        # Marca o bloco índice
         self.block_status[index_block] = self.COLOR_INDEX_BLOCK
+
+        # Marca os blocos alocados e cria as setas do bloco índice para cada bloco
         for block in allocated_blocks:
             self.block_status[block] = self.current_allocation_color
             self.arrows.append(
                 (
-                    index_block,
-                    block,
+                    index_block,  # Bloco de origem (bloco índice)
+                    block,        # Bloco de destino
                     self.block_size,
                     self.block_size,
                     self.margin,
                     self.blocks_per_row
                 )
             )
+
+        # Atualiza o canvas para refletir a alocação
         self.atualizar_imagem_disco()
         return [index_block] + allocated_blocks
 
@@ -504,15 +512,20 @@ class SimuladorAlocacao:
         espaco,
         blocos_por_linha
     ) -> None:
-        """Desenha uma seta apontando para o próximo bloco de memória."""
+        """Desenha uma seta apontando do bloco de origem para o bloco de destino."""
+        # Calcula as coordenadas do bloco de origem
         linha_origem = bloco_origem // blocos_por_linha
         coluna_origem = bloco_origem % blocos_por_linha
         x1 = coluna_origem * (largura_bloco + espaco) + espaco + largura_bloco / 2
         y1 = linha_origem * (altura_bloco + espaco) + espaco + altura_bloco / 2
+
+        # Calcula as coordenadas do bloco de destino
         linha_destino = bloco_destino // blocos_por_linha
         coluna_destino = bloco_destino % blocos_por_linha
         x2 = coluna_destino * (largura_bloco + espaco) + espaco + largura_bloco / 2
         y2 = linha_destino * (altura_bloco + espaco) + espaco + altura_bloco / 2
+
+        # Ajusta as coordenadas para evitar sobreposição com as bordas
         ajuste_x = largura_bloco / 4
         ajuste_y = altura_bloco / 4
         if x1 < x2:
@@ -527,18 +540,17 @@ class SimuladorAlocacao:
         elif y1 > y2:
             y1 -= ajuste_y
             y2 += ajuste_y
+
+        # Desenha a linha no canvas com uma seta no final
         self.canvas.create_line(
-            x1,
-            y1,
-            x2,
-            y2,
+            x1, y1, x2, y2,
             arrow=tk.LAST,
             fill='black',
-            width=4
+            width=3
         )
 
     def atualizar_imagem_disco(self) -> None:
-        """Atualiza a imagem do disco no canvas com os novos blocos alocados."""
+        """Atualiza a imagem do disco no canvas com os novos blocos alocados e exibe setas do arquivo selecionado."""
         num_blocks = len(self.block_status)
         rows = (num_blocks + self.blocks_per_row - 1) // self.blocks_per_row
         width = self.blocks_per_row * (self.block_size + self.margin) + self.margin
@@ -549,6 +561,8 @@ class SimuladorAlocacao:
             font = ImageFont.truetype("arial.ttf", size=14)
         except IOError:
             font = ImageFont.load_default()
+        
+        # Desenha os blocos
         for i in range(num_blocks):
             row, col = divmod(i, self.blocks_per_row)
             x0 = col * (self.block_size + self.margin) + self.margin
@@ -602,12 +616,38 @@ class SimuladorAlocacao:
                 fill="black",
                 font=font
             )
+        
         self.tk_image = ImageTk.PhotoImage(image)
         self.canvas.delete("all")
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
-        for arrow in self.arrows:
-            self.desenhar_seta(*arrow)
+        
+        # Exibe as setas de acordo com o método de alocação
+        if self.selected_file and self.selected_file in self.files:
+            selected_blocks = self.files[self.selected_file]["blocos"]
+            allocation_method = self.files[self.selected_file]["metodo"]
+            if allocation_method in ["Contígua", "Encadeada"]:
+                for i in range(len(selected_blocks) - 1):
+                    self.desenhar_seta(
+                        selected_blocks[i],
+                        selected_blocks[i + 1],
+                        self.block_size,
+                        self.block_size,
+                        self.margin,
+                        self.blocks_per_row
+                    )
+            elif allocation_method == "Indexada":
+                index_block = selected_blocks[0]
+                data_blocks = selected_blocks[1:]
+                for block in data_blocks:
+                    self.desenhar_seta(
+                        index_block,
+                        block,
+                        self.block_size,
+                        self.block_size,
+                        self.margin,
+                        self.blocks_per_row
+                    )
 
     def atualizar_tabela_alocacao(self) -> None:
         """Atualiza a tabela de alocação com os arquivos atuais."""
