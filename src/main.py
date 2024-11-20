@@ -279,9 +279,9 @@ class SimuladorAlocacao:
         self.tree.heading("arquivo", text="Arquivo")
         self.tree.heading("tamanho", text="Tamanho")
         self.tree.heading("blocos", text="Blocos Alocados")
-        self.tree.column("arquivo", width=120, anchor='center')  # Nova coluna para nome do arquivo
-        self.tree.column("tamanho", width=80, anchor='center')  # Ajustar tamanho da coluna
-        self.tree.column("blocos", width=200, anchor='center')  # Ajustar tamanho da coluna
+        self.tree.column("arquivo", width=120, anchor='center')
+        self.tree.column("tamanho", width=80, anchor='center')
+        self.tree.column("blocos", width=200, anchor='center')
         self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Barra de rolagem para a tabela
@@ -377,13 +377,17 @@ class SimuladorAlocacao:
         if self.file_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do arquivo.")
             return
+
         if self.file_name_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o nome do arquivo.")
             return
+
         file_name = self.file_name_entry.get()
+
         if file_name in self.files:
             messagebox.showwarning("Atenção", "Já existe um arquivo com este nome.")
             return
+
         try:
             file_size = int(self.file_size_entry.get())
             if file_size <= 0:
@@ -393,18 +397,22 @@ class SimuladorAlocacao:
             if allocation_method == "Contígua":
                 self.current_allocation_color = self.COLOR_CONTIGUOUS
                 allocated_blocks = self.alocar_contiguo(file_size)
+
             elif allocation_method == "Encadeada":
                 self.current_allocation_color = self.COLOR_LINKED
                 allocated_blocks = self.alocar_encadeado(file_size)
+
             elif allocation_method == "Indexada":
                 self.current_allocation_color = self.COLOR_INDEXED
                 allocated_blocks = self.alocar_indexado(file_size)
+
             if allocated_blocks:
                 self.files[file_name] = {
                     "tamanho": file_size,
                     "blocos": allocated_blocks,
                     "metodo": allocation_method
                 }
+
                 self.atualizar_tabela_alocacao()
         except ValueError as e:
             messagebox.showerror("Erro", f"Entrada inválida: {e}")
@@ -490,8 +498,8 @@ class SimuladorAlocacao:
             self.block_status[block] = self.current_allocation_color
             self.arrows.append(
                 (
-                    index_block,  # Bloco de origem (bloco índice)
-                    block,        # Bloco de destino
+                    index_block,
+                    block,
                     self.block_size,
                     self.block_size,
                     self.margin,
