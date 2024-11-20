@@ -1,6 +1,6 @@
 import random
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
 class SimuladorAlocacao:
@@ -26,10 +26,13 @@ class SimuladorAlocacao:
         self.tk_image = None
         self.disk_size_entry = None
         self.file_size_entry = None
+        self.file_name_entry = None  # Novo campo para nome do arquivo
         self.allocation_type = None
         self.difficulty_level = None
         self.canvas = None
         self.scrollbar = None
+        self.files = {}
+        self.selected_file = None
 
         self.configurar_barra_lateral()
         self.configurar_canvas()
@@ -53,6 +56,15 @@ class SimuladorAlocacao:
             bg="lightgray",
             fg="red"
         ).pack(pady=(0, 5), anchor="w", padx=10)
+
+        # Entrada para o nome do arquivo
+        tk.Label(
+            sidebar,
+            text="Nome do Arquivo:",
+            bg="lightgray"
+        ).pack(pady=5, anchor="w", padx=10)
+        self.file_name_entry = tk.Entry(sidebar)
+        self.file_name_entry.pack(pady=5, anchor="w", padx=10)
 
         # Entrada para o tamanho do arquivo
         tk.Label(
@@ -197,6 +209,11 @@ class SimuladorAlocacao:
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
         tk.Button(
             sidebar,
+            text="Excluir Arquivo",
+            command=self.excluir_arquivo
+        ).pack(side=tk.BOTTOM, pady=10, anchor="s")
+        tk.Button(
+            sidebar,
             text="Criar Arquivo",
             command=self.criar_arquivo
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
@@ -207,11 +224,15 @@ class SimuladorAlocacao:
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
 
     def configurar_canvas(self):
-        """Configura o canvas onde as imagens dos blocos serão exibidas."""
+        """Configura o canvas onde as imagens dos blocos 
+        serão exibidas e posiciona a tabela à direita."""
+        # Frame para o canvas
         canvas_frame = tk.Frame(self.raiz)
-        canvas_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.canvas = tk.Canvas(canvas_frame, bg="white")
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Barra de rolagem vertical para o canvas
         self.scrollbar = tk.Scrollbar(
             canvas_frame,
             orient="vertical",
@@ -220,6 +241,37 @@ class SimuladorAlocacao:
         self.scrollbar.pack(side=tk.RIGHT, fill="y")
         self.canvas.config(yscrollcommand=self.scrollbar.set)
         self.tk_image = None
+
+        # Frame para a tabela de alocação à direita
+        self.tabela_frame = tk.Frame(self.raiz, width=350, bg="lightgray")  # Aumentar a largura
+        self.tabela_frame.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Configuração da tabela de alocação
+        self.tree = ttk.Treeview(
+            self.tabela_frame,
+            columns=("arquivo", "tamanho", "blocos"),
+            show='headings',
+            height=18  # Aumentar a altura para exibir mais linhas
+        )
+        
+        # Estilo para ajustar a altura das linhas
+        style = ttk.Style()
+        style.configure(
+            "Treeview",
+            rowheight=40  # Ajuste a altura de cada linha
+        )
+        self.tree.heading("arquivo", text="Arquivo")
+        self.tree.heading("tamanho", text="Tamanho")
+        self.tree.heading("blocos", text="Blocos Alocados")
+        self.tree.column("arquivo", width=120, anchor='center')  # Nova coluna para nome do arquivo
+        self.tree.column("tamanho", width=80, anchor='center')  # Ajustar tamanho da coluna
+        self.tree.column("blocos", width=200, anchor='center')  # Ajustar tamanho da coluna
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Barra de rolagem para a tabela
+        scrollbar = tk.Scrollbar(self.tabela_frame, orient="vertical", command=self.tree.yview)
+        self.tree.config(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill="y")
 
     def gerar_imagem_disco(self, num_blocks):
         """Gera a imagem do disco com os blocos livres e alocados."""
@@ -261,6 +313,8 @@ class SimuladorAlocacao:
                 font = ImageFont.load_default()
             self.block_status = [False] * num_blocks
             used_blocks = set()
+            self.files = {}
+            self.arrows = []
 
             # Mapeia níveis de dificuldade para divisores
             difficulty_mapping = {
@@ -290,58 +344,7 @@ class SimuladorAlocacao:
                     used_blocks.update(allocated_blocks)
                     for block in allocated_blocks:
                         self.block_status[block] = True
-            # Desenha os blocos
-            for i in range(num_blocks):
-                row, col = divmod(i, self.blocks_per_row)
-                x0 = col * (self.block_size + self.margin) + self.margin
-                y0 = row * (self.block_size + self.margin) + self.margin
-                x1 = x0 + self.block_size
-                y1 = y0 + self.block_size
-                fill_color = "firebrick" if self.block_status[i] else "skyblue"
-                text = "Alocado" if self.block_status[i] else "Livre"
-                if self.block_status[i]:
-                    draw.rectangle(
-                        [x0, y0, x1, y1],
-                        fill=fill_color,
-                        outline="black",
-                        width=3
-                    )
-                else:
-                    draw.rectangle(
-                        [x0, y0, x1, y1],
-                        fill=fill_color,
-                        outline="black"
-                    )
-                # Escreve o ID do bloco
-                block_id_text = str(i + 1)
-                block_id_bbox = draw.textbbox((0, 0), block_id_text, font=font)
-                block_id_width = block_id_bbox[2] - block_id_bbox[0]
-                block_id_x = x0 + (self.block_size - block_id_width) // 2
-                block_id_y = y0 + 5
-                draw.text(
-                    (block_id_x, block_id_y),
-                    block_id_text,
-                    fill="black",
-                    font=font
-                )
-                # Escreve o status do bloco
-                text_bbox = draw.textbbox((0, 0), text, font=font)
-                text_width = text_bbox[2] - text_bbox[0]
-                text_height = text_bbox[3] - text_bbox[1]
-                text_x = x0 + (self.block_size - text_width) // 2
-                text_y = y0 + (self.block_size - text_height) // 2
-                draw.text(
-                    (text_x, text_y),
-                    text,
-                    fill="black",
-                    font=font
-                )
-            self.tk_image = ImageTk.PhotoImage(image)
-            self.canvas.delete("all")
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
-            self.canvas.config(scrollregion=self.canvas.bbox("all"))
-            for arrow in self.arrows:
-                self.desenhar_seta(*arrow)
+            self.atualizar_imagem_disco()
         except Exception as e:  # pylint: disable=W0718
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
 
@@ -368,6 +371,13 @@ class SimuladorAlocacao:
         if self.file_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do arquivo.")
             return
+        if self.file_name_entry.get() == '':
+            messagebox.showwarning("Atenção", "Informe o nome do arquivo.")
+            return
+        file_name = self.file_name_entry.get()
+        if file_name in self.files:
+            messagebox.showwarning("Atenção", "Já existe um arquivo com este nome.")
+            return
         try:
             file_size = int(self.file_size_entry.get())
             if file_size <= 0:
@@ -375,13 +385,20 @@ class SimuladorAlocacao:
             allocation_method = self.allocation_type.get()
             if allocation_method == "Contígua":
                 self.current_allocation_color = self.COLOR_CONTIGUOUS
-                self.alocar_contiguo(file_size)
+                allocated_blocks = self.alocar_contiguo(file_size)
             elif allocation_method == "Encadeada":
                 self.current_allocation_color = self.COLOR_LINKED
-                self.alocar_encadeado(file_size)
+                allocated_blocks = self.alocar_encadeado(file_size)
             elif allocation_method == "Indexada":
                 self.current_allocation_color = self.COLOR_INDEXED
-                self.alocar_indexado(file_size)
+                allocated_blocks = self.alocar_indexado(file_size)
+            if allocated_blocks:
+                self.files[file_name] = {
+                    "tamanho": file_size,
+                    "blocos": allocated_blocks,
+                    "metodo": allocation_method
+                }
+                self.atualizar_tabela_alocacao()
         except ValueError as e:
             messagebox.showerror("Erro", f"Entrada inválida: {e}")
 
@@ -397,7 +414,6 @@ class SimuladorAlocacao:
             ):
                 for block in contiguous_blocks:
                     self.block_status[block] = self.current_allocation_color
-
                 # Adicionar setas entre os blocos contíguos
                 for i in range(len(contiguous_blocks) - 1):
                     self.arrows.append(
@@ -411,12 +427,13 @@ class SimuladorAlocacao:
                         )
                     )
                 self.atualizar_imagem_disco()
-                return
+                return contiguous_blocks
             start_index += 1
         messagebox.showerror(
             "Erro",
             "Não há blocos contíguos suficientes disponíveis para alocar o arquivo."
         )
+        return None
 
     def alocar_encadeado(self, file_size):
         """Aloca um arquivo de forma encadeada."""
@@ -426,7 +443,7 @@ class SimuladorAlocacao:
                 "Erro",
                 "Não há blocos suficientes disponíveis para alocar o arquivo."
             )
-            return
+            return None
         allocated_blocks = random.sample(free_blocks, file_size)
         for i in range(len(allocated_blocks) - 1):
             self.block_status[allocated_blocks[i]] = self.current_allocation_color
@@ -442,6 +459,7 @@ class SimuladorAlocacao:
             )
         self.block_status[allocated_blocks[-1]] = self.current_allocation_color
         self.atualizar_imagem_disco()
+        return allocated_blocks
 
     def alocar_indexado(self, file_size):
         """Aloca um arquivo de forma indexada."""
@@ -451,7 +469,7 @@ class SimuladorAlocacao:
                 "Erro",
                 "Não há blocos suficientes disponíveis para alocar o arquivo."
             )
-            return
+            return None
         index_block = free_blocks.pop(0)
         allocated_blocks = random.sample(free_blocks, file_size)
         self.block_status[index_block] = self.COLOR_INDEX_BLOCK
@@ -468,6 +486,7 @@ class SimuladorAlocacao:
                 )
             )
         self.atualizar_imagem_disco()
+        return [index_block] + allocated_blocks
 
     def desenhar_seta(
         self,
@@ -537,10 +556,15 @@ class SimuladorAlocacao:
                 fill_color = "firebrick" if self.block_status[i] else "skyblue"
                 text = "Alocado" if self.block_status[i] else "Livre"
                 border_width = 3 if self.block_status[i] else 1
+            if self.selected_file and i in self.files[self.selected_file]["blocos"]:
+                outline_color = "yellow"
+                border_width = 5
+            else:
+                outline_color = "black"
             draw.rectangle(
                 [x0, y0, x1, y1],
                 fill=fill_color,
-                outline="black",
+                outline=outline_color,
                 width=border_width
             )
             block_id_text = str(i + 1)
@@ -572,12 +596,95 @@ class SimuladorAlocacao:
         for arrow in self.arrows:
             self.desenhar_seta(*arrow)
 
+    def atualizar_tabela_alocacao(self):
+        """Atualiza a tabela de alocação com os arquivos atuais."""
+        # Limpar a tabela antes de atualizar
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Inserir os arquivos na tabela
+        for file_name, info in self.files.items():
+            # Limitar o número de blocos exibidos diretamente na tabela
+            num_blocos_exibir = 10  # Número de blocos a serem exibidos na tabela
+            blocos_str = ', '.join(str(b + 1) for b in info["blocos"][:num_blocos_exibir])
+            if len(info["blocos"]) > num_blocos_exibir:
+                blocos_str += ", ... (clique para ver mais)"
+
+            self.tree.insert(
+                '',
+                'end',
+                iid=file_name,
+                values=(file_name, info["tamanho"], blocos_str)  # Inclui o nome do arquivo e os primeiros blocos
+            )
+
+        # Adicionar evento de clique para visualizar todos os blocos
+        self.tree.bind("<Double-1>", self.mostrar_blocos_completos)
+
+    def mostrar_blocos_completos(self, event):
+        """Mostra todos os blocos alocados em uma janela popup."""
+        selected_item = self.tree.focus()
+        if not selected_item:
+            return
+
+        file_info = self.files.get(selected_item)
+        if not file_info:
+            return
+
+        # Cria uma nova janela para exibir os blocos completos
+        popup = tk.Toplevel(self.raiz)
+        popup.title(f"Blocos Alocados - {selected_item}")
+        popup.geometry("400x400")
+
+        blocos_str = ', '.join(str(b + 1) for b in file_info["blocos"])
+        text_widget = tk.Text(popup, wrap=tk.WORD)
+        text_widget.insert(tk.END, blocos_str)
+        text_widget.config(state=tk.DISABLED)  # Tornar o texto não editável
+        text_widget.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+
+    def selecionar_arquivo(self, event):
+        """Destaca os blocos do arquivo selecionado na tabela."""
+        selected_item = self.tree.focus()
+        self.selected_file = selected_item
+        self.atualizar_imagem_disco()
+
+    def excluir_arquivo(self):
+        """Exclui um arquivo pelo nome e atualiza o disco."""
+        if not self.files:
+            messagebox.showwarning("Atenção", "Não há arquivos para excluir.")
+            return
+        file_name = self.file_name_entry.get()
+        if file_name == '':
+            messagebox.showwarning("Atenção", "Informe o nome do arquivo a ser excluído.")
+            return
+        if file_name not in self.files:
+            messagebox.showerror("Erro", "Arquivo não encontrado.")
+            return
+        # Liberar os blocos alocados pelo arquivo
+        for block in self.files[file_name]["blocos"]:
+            self.block_status[block] = False
+        # Remover as setas associadas ao arquivo
+        self.arrows = [
+            arrow for arrow in self.arrows
+            if arrow[0] not in self.files[file_name]["blocos"]
+            and arrow[1] not in self.files[file_name]["blocos"]
+        ]
+        # Remover o arquivo da lista
+        del self.files[file_name]
+        self.selected_file = None
+        self.atualizar_imagem_disco()
+        self.atualizar_tabela_alocacao()
+        messagebox.showinfo("Sucesso", f"Arquivo '{file_name}' excluído com sucesso.")
+
     def limpar_canvas(self):
         """Limpa o canvas, removendo todos os blocos e setas."""
         self.canvas.delete("all")
         self.tk_image = None
         self.block_status = []
         self.arrows = []
+        self.files = {}
+        self.selected_file = None
+        self.tree.delete(*self.tree.get_children())
 
 if __name__ == "__main__":
     root = tk.Tk()
