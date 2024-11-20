@@ -3,24 +3,40 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
+class SimuladorAlocacao:
+    """Classe principal contendo todos os atributos e métodos para simular a alocação de blocos."""
 
-class SimulatorApp:
     COLOR_CONTIGUOUS = "#722F37"   # Cor vinho
     COLOR_LINKED = "#90EE90"       # Verde claro
     COLOR_INDEXED = "#E6E6FA"      # Lilás claro
     COLOR_INDEX_BLOCK = "#FFFF00"  # Amarelo para o bloco índice
 
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Simulador de Alocação de Blocos Lógicos")
-        self.root.geometry("1366x768")
-        self.setup_sidebar()
-        self.setup_canvas()
+    def __init__(self, raiz):
+        self.raiz = raiz
+        self.raiz.title("Simulador de Alocação de Blocos Lógicos")
+        self.raiz.geometry("1366x768")
+
+        # Inicialização de atributos
         self.block_status = []
         self.arrows = []
+        self.block_size = None
+        self.margin = None
+        self.blocks_per_row = None
+        self.current_allocation_color = None
+        self.tk_image = None
+        self.disk_size_entry = None
+        self.file_size_entry = None
+        self.allocation_type = None
+        self.difficulty_level = None
+        self.canvas = None
+        self.scrollbar = None
 
-    def setup_sidebar(self):
-        sidebar = tk.Frame(self.root, width=300, bg="lightgray")
+        self.configurar_barra_lateral()
+        self.configurar_canvas()
+
+    def configurar_barra_lateral(self):
+        """Configura a barra lateral com os campos de entrada e opções."""
+        sidebar = tk.Frame(self.raiz, width=300, bg="lightgray")
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
 
         # Entrada para o tamanho do disco
@@ -75,6 +91,35 @@ class SimulatorApp:
             value="Indexada",
             bg="lightgray"
         ).pack(pady=5, anchor="w", padx=10)
+
+        # Seleção do nível de dificuldade
+        tk.Label(
+            sidebar,
+            text="Dificuldade:",
+            bg="lightgray"
+        ).pack(pady=5, anchor="w", padx=10)
+        self.difficulty_level = tk.StringVar(value="Fácil")
+        tk.Radiobutton(
+            sidebar,
+            text="Fácil",
+            variable=self.difficulty_level,
+            value="Fácil",
+            bg="lightgray"
+        ).pack(pady=2, anchor="w", padx=10)
+        tk.Radiobutton(
+            sidebar,
+            text="Médio",
+            variable=self.difficulty_level,
+            value="Médio",
+            bg="lightgray"
+        ).pack(pady=2, anchor="w", padx=10)
+        tk.Radiobutton(
+            sidebar,
+            text="Difícil",
+            variable=self.difficulty_level,
+            value="Difícil",
+            bg="lightgray"
+        ).pack(pady=2, anchor="w", padx=10)
 
         # Tabela de cores (Legenda)
         tk.Label(
@@ -148,21 +193,22 @@ class SimulatorApp:
         tk.Button(
             sidebar,
             text="Criar Disco",
-            command=self.show_disk
+            command=self.exibir_disco
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
         tk.Button(
             sidebar,
             text="Criar Arquivo",
-            command=self.allocate_file
+            command=self.criar_arquivo
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
         tk.Button(
             sidebar,
             text="Limpar",
-            command=self.clear_canvas
+            command=self.limpar_canvas
         ).pack(side=tk.BOTTOM, pady=10, anchor="s")
 
-    def setup_canvas(self):
-        canvas_frame = tk.Frame(self.root)
+    def configurar_canvas(self):
+        """Configura o canvas onde as imagens dos blocos serão exibidas."""
+        canvas_frame = tk.Frame(self.raiz)
         canvas_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.canvas = tk.Canvas(canvas_frame, bg="white")
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -175,7 +221,9 @@ class SimulatorApp:
         self.canvas.config(yscrollcommand=self.scrollbar.set)
         self.tk_image = None
 
-    def generate_disk_image(self, num_blocks):
+    def gerar_imagem_disco(self, num_blocks):
+        """Gera a imagem do disco com os blocos livres e alocados."""
+        # Configurações de tamanho dos blocos e margens
         if num_blocks < 50:
             self.block_size = 80
             self.margin = 100
@@ -201,6 +249,7 @@ class SimulatorApp:
             self.margin = 30
             self.blocks_per_row = 15
         try:
+            # Calcula o tamanho da imagem
             rows = (num_blocks + self.blocks_per_row - 1) // self.blocks_per_row
             width = self.blocks_per_row * (self.block_size + self.margin) + self.margin
             height = rows * (self.block_size + self.margin) + self.margin
@@ -212,7 +261,17 @@ class SimulatorApp:
                 font = ImageFont.load_default()
             self.block_status = [False] * num_blocks
             used_blocks = set()
-            total_files = num_blocks // 5
+
+            # Mapeia níveis de dificuldade para divisores
+            difficulty_mapping = {
+                "Fácil": 5,
+                "Médio": 3,
+                "Difícil": 1
+            }
+            divisor = difficulty_mapping.get(self.difficulty_level.get(), 5)
+            total_files = num_blocks // divisor
+
+            # Gera blocos já alocados para simular uso do disco
             for _ in range(total_files):
                 start_block = random.randint(0, num_blocks - 1)
                 if start_block in used_blocks:
@@ -231,6 +290,7 @@ class SimulatorApp:
                     used_blocks.update(allocated_blocks)
                     for block in allocated_blocks:
                         self.block_status[block] = True
+            # Desenha os blocos
             for i in range(num_blocks):
                 row, col = divmod(i, self.blocks_per_row)
                 x0 = col * (self.block_size + self.margin) + self.margin
@@ -252,6 +312,7 @@ class SimulatorApp:
                         fill=fill_color,
                         outline="black"
                     )
+                # Escreve o ID do bloco
                 block_id_text = str(i + 1)
                 block_id_bbox = draw.textbbox((0, 0), block_id_text, font=font)
                 block_id_width = block_id_bbox[2] - block_id_bbox[0]
@@ -263,6 +324,7 @@ class SimulatorApp:
                     fill="black",
                     font=font
                 )
+                # Escreve o status do bloco
                 text_bbox = draw.textbbox((0, 0), text, font=font)
                 text_width = text_bbox[2] - text_bbox[0]
                 text_height = text_bbox[3] - text_bbox[1]
@@ -280,11 +342,12 @@ class SimulatorApp:
             self.canvas.config(scrollregion=self.canvas.bbox("all"))
             for arrow in self.arrows:
                 self.desenhar_seta(*arrow)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=W0718
             messagebox.showerror("Erro", f"Erro ao gerar a imagem: {e}")
 
-    def show_disk(self):
-        self.clear_canvas()
+    def exibir_disco(self):
+        """Exibe a imagem do disco no canvas."""
+        self.limpar_canvas()
         if self.disk_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do disco.")
             return
@@ -294,11 +357,14 @@ class SimulatorApp:
                 raise ValueError(
                     "O número de blocos deve ser maior que zero e menor que 512."
                 )
-            self.generate_disk_image(num_blocks)
+            self.gerar_imagem_disco(num_blocks)
         except ValueError as e:
             messagebox.showerror("Erro", f"Entrada inválida: {e}")
 
-    def allocate_file(self):
+    def criar_arquivo(self):
+        """
+        Cria um arquivo com o tamanho especificado e método de alocação selecionado.
+        """
         if self.file_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do arquivo.")
             return
@@ -309,17 +375,18 @@ class SimulatorApp:
             allocation_method = self.allocation_type.get()
             if allocation_method == "Contígua":
                 self.current_allocation_color = self.COLOR_CONTIGUOUS
-                self.allocate_contiguous(file_size)
+                self.alocar_contiguo(file_size)
             elif allocation_method == "Encadeada":
                 self.current_allocation_color = self.COLOR_LINKED
-                self.allocate_linked(file_size)
+                self.alocar_encadeado(file_size)
             elif allocation_method == "Indexada":
                 self.current_allocation_color = self.COLOR_INDEXED
-                self.allocate_indexed(file_size)
+                self.alocar_indexado(file_size)
         except ValueError as e:
             messagebox.showerror("Erro", f"Entrada inválida: {e}")
 
-    def allocate_contiguous(self, file_size):
+    def alocar_contiguo(self, file_size):
+        """Aloca um arquivo de forma contígua na memória."""
         free_blocks = [i for i, status in enumerate(self.block_status) if not status]
         start_index = 0
         while start_index <= len(free_blocks) - file_size:
@@ -330,7 +397,20 @@ class SimulatorApp:
             ):
                 for block in contiguous_blocks:
                     self.block_status[block] = self.current_allocation_color
-                self.update_disk_image()
+
+                # Adicionar setas entre os blocos contíguos
+                for i in range(len(contiguous_blocks) - 1):
+                    self.arrows.append(
+                        (
+                            contiguous_blocks[i],
+                            contiguous_blocks[i + 1],
+                            self.block_size,
+                            self.block_size,
+                            self.margin,
+                            self.blocks_per_row
+                        )
+                    )
+                self.atualizar_imagem_disco()
                 return
             start_index += 1
         messagebox.showerror(
@@ -338,7 +418,8 @@ class SimulatorApp:
             "Não há blocos contíguos suficientes disponíveis para alocar o arquivo."
         )
 
-    def allocate_linked(self, file_size):
+    def alocar_encadeado(self, file_size):
+        """Aloca um arquivo de forma encadeada."""
         free_blocks = [i for i, status in enumerate(self.block_status) if not status]
         if len(free_blocks) < file_size:
             messagebox.showerror(
@@ -356,12 +437,37 @@ class SimulatorApp:
                     self.block_size,
                     self.block_size,
                     self.margin,
-                    self.blocks_per_row,
-                    'black'
+                    self.blocks_per_row
                 )
             )
         self.block_status[allocated_blocks[-1]] = self.current_allocation_color
-        self.update_disk_image()
+        self.atualizar_imagem_disco()
+
+    def alocar_indexado(self, file_size):
+        """Aloca um arquivo de forma indexada."""
+        free_blocks = [i for i, status in enumerate(self.block_status) if not status]
+        if len(free_blocks) < file_size + 1:
+            messagebox.showerror(
+                "Erro",
+                "Não há blocos suficientes disponíveis para alocar o arquivo."
+            )
+            return
+        index_block = free_blocks.pop(0)
+        allocated_blocks = random.sample(free_blocks, file_size)
+        self.block_status[index_block] = self.COLOR_INDEX_BLOCK
+        for block in allocated_blocks:
+            self.block_status[block] = self.current_allocation_color
+            self.arrows.append(
+                (
+                    index_block,
+                    block,
+                    self.block_size,
+                    self.block_size,
+                    self.margin,
+                    self.blocks_per_row
+                )
+            )
+        self.atualizar_imagem_disco()
 
     def desenhar_seta(
         self,
@@ -370,9 +476,9 @@ class SimulatorApp:
         largura_bloco,
         altura_bloco,
         espaco,
-        blocos_por_linha,
-        cor
+        blocos_por_linha
     ):
+        """Desenha uma seta apontando para o próximo bloco de memória."""
         linha_origem = bloco_origem // blocos_por_linha
         coluna_origem = bloco_origem % blocos_por_linha
         x1 = coluna_origem * (largura_bloco + espaco) + espaco + largura_bloco / 2
@@ -405,33 +511,8 @@ class SimulatorApp:
             width=4
         )
 
-    def allocate_indexed(self, file_size):
-        free_blocks = [i for i, status in enumerate(self.block_status) if not status]
-        if len(free_blocks) < file_size + 1:
-            messagebox.showerror(
-                "Erro",
-                "Não há blocos suficientes disponíveis para alocar o arquivo."
-            )
-            return
-        index_block = free_blocks.pop(0)
-        allocated_blocks = random.sample(free_blocks, file_size)
-        self.block_status[index_block] = self.COLOR_INDEX_BLOCK
-        for block in allocated_blocks:
-            self.block_status[block] = self.current_allocation_color
-            self.arrows.append(
-                (
-                    index_block,
-                    block,
-                    self.block_size,
-                    self.block_size,
-                    self.margin,
-                    self.blocks_per_row,
-                    'black'
-                )
-            )
-        self.update_disk_image()
-
-    def update_disk_image(self):
+    def atualizar_imagem_disco(self):
+        """Atualiza a imagem do disco no canvas com os novos blocos alocados."""
         num_blocks = len(self.block_status)
         rows = (num_blocks + self.blocks_per_row - 1) // self.blocks_per_row
         width = self.blocks_per_row * (self.block_size + self.margin) + self.margin
@@ -491,14 +572,14 @@ class SimulatorApp:
         for arrow in self.arrows:
             self.desenhar_seta(*arrow)
 
-    def clear_canvas(self):
+    def limpar_canvas(self):
+        """Limpa o canvas, removendo todos os blocos e setas."""
         self.canvas.delete("all")
         self.tk_image = None
         self.block_status = []
         self.arrows = []
 
-
 if __name__ == "__main__":
     root = tk.Tk()
-    app = SimulatorApp(root)
+    app = SimuladorAlocacao(root)
     root.mainloop()
