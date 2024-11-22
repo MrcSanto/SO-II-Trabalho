@@ -33,6 +33,8 @@ class SimuladorAlocacao:
         self.scrollbar = None
         self.files = {}
         self.selected_file = None
+        self.selected_allocation_method = None  # Novo atributo para armazenar o método selecionado
+        self.allocation_method_radio_buttons = []  # Lista para armazenar os botões de rádio
 
         self.configurar_barra_lateral()
         self.configurar_canvas()
@@ -96,27 +98,39 @@ class SimuladorAlocacao:
             bg="lightgray"
         ).pack(pady=5, anchor="w", padx=10)
         self.allocation_type = tk.StringVar(value="Contígua")
-        tk.Radiobutton(
+
+        # Lista para armazenar os botões de rádio
+        self.allocation_method_radio_buttons = []
+
+        radio_button = tk.Radiobutton(
             sidebar,
             text="Contígua (first-fit)",
             variable=self.allocation_type,
             value="Contígua",
             bg="lightgray"
-        ).pack(pady=5, anchor="w", padx=10)
-        tk.Radiobutton(
+        )
+        radio_button.pack(pady=5, anchor="w", padx=10)
+        self.allocation_method_radio_buttons.append(radio_button)
+
+        radio_button = tk.Radiobutton(
             sidebar,
             text="Encadeada",
             variable=self.allocation_type,
             value="Encadeada",
             bg="lightgray"
-        ).pack(pady=5, anchor="w", padx=10)
-        tk.Radiobutton(
+        )
+        radio_button.pack(pady=5, anchor="w", padx=10)
+        self.allocation_method_radio_buttons.append(radio_button)
+
+        radio_button = tk.Radiobutton(
             sidebar,
             text="Indexada",
             variable=self.allocation_type,
             value="Indexada",
             bg="lightgray"
-        ).pack(pady=5, anchor="w", padx=10)
+        )
+        radio_button.pack(pady=5, anchor="w", padx=10)
+        self.allocation_method_radio_buttons.append(radio_button)
 
         # Seleção do nível de dificuldade
         tk.Label(
@@ -366,7 +380,11 @@ class SimuladorAlocacao:
                 raise ValueError(
                     "O número de blocos deve ser maior que zero e menor que 512."
                 )
+            self.selected_allocation_method = self.allocation_type.get()
             self.gerar_imagem_disco(num_blocks)
+            # Desabilitar os botões de seleção do método de alocação
+            for rb in self.allocation_method_radio_buttons:
+                rb.config(state=tk.DISABLED)
         except ValueError as e:
             messagebox.showerror("Erro", f"Entrada inválida: {e}")
 
@@ -374,6 +392,10 @@ class SimuladorAlocacao:
         """
         Cria um arquivo com o tamanho especificado e método de alocação selecionado.
         """
+        if self.selected_allocation_method is None:
+            messagebox.showwarning("Atenção", "Crie um disco antes de alocar arquivos.")
+            return
+
         if self.file_size_entry.get() == '':
             messagebox.showwarning("Atenção", "Informe o tamanho do arquivo.")
             return
@@ -392,7 +414,7 @@ class SimuladorAlocacao:
             file_size = int(self.file_size_entry.get())
             if file_size <= 0:
                 raise ValueError("O tamanho do arquivo deve ser maior que zero.")
-            allocation_method = self.allocation_type.get()
+            allocation_method = self.selected_allocation_method  # Usar o método selecionado na criação do disco
             allocated_blocks = None
             if allocation_method == "Contígua":
                 self.current_allocation_color = self.COLOR_CONTIGUOUS
@@ -485,7 +507,7 @@ class SimuladorAlocacao:
                 "Não há blocos suficientes disponíveis para alocar o arquivo."
             )
             return None
-        
+
         # Seleciona o bloco índice e os blocos de dados
         index_block = free_blocks.pop(0)  # Primeiro bloco é o índice
         allocated_blocks = random.sample(free_blocks, file_size)  # Seleciona blocos para alocar
@@ -760,6 +782,10 @@ class SimuladorAlocacao:
         self.files = {}
         self.selected_file = None
         self.tree.delete(*self.tree.get_children())
+        self.selected_allocation_method = None  # Resetar o método de alocação selecionado
+        # Reabilitar os botões de seleção do método de alocação
+        for rb in self.allocation_method_radio_buttons:
+            rb.config(state=tk.NORMAL)
 
 if __name__ == "__main__":
     root = tk.Tk()
