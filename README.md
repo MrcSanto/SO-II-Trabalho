@@ -152,7 +152,8 @@ O usuário pode escolher entre três métodos de alocação:
 
 ### Exemplo de Uso
 1. Configure o tamanho do disco e escolha um método de alocação.
-    - [Informe o tamanho do disco](./images/tamanho_do_disco.png)
+    - Informe o tamanho do disco
+      - ![](./images/tamanho_do_disco.png)
     - [Escolha o método de alocação](./images/metodo_alocacao.png)
 2. Crie o disco e visualize sua estrutura.
     - [Clique no botão 'Criar Disco'](./images/botoes.png)
