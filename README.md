@@ -154,17 +154,29 @@ O usuário pode escolher entre três métodos de alocação:
 1. Configure o tamanho do disco e escolha um método de alocação.
     - Informe o tamanho do disco
       - ![](./images/tamanho_do_disco.png)
-    - [Escolha o método de alocação](./images/metodo_alocacao.png)
+    - Escolha o método de alocação
+      - ![](./images/metodo_alocacao.png)
 2. Crie o disco e visualize sua estrutura.
-    - [Clique no botão 'Criar Disco'](./images/botoes.png)
-    - [Exemplo](./images/exemplo.png)
+    - Clique no botão 'Criar Disco'
+      - ![](./images/botoes.png)
+    - Exemplo
+      - ![](./images/exemplo.png)
 3. Adicione arquivos com diferentes tamanhos e veja como os blocos são alocados.
-    - [Informe os campos 'Nome do arquivo' e 'Tamanho do Arquivo'. E então clique no botão 'Criar Arquivo'](./images/botoes.png)
-    - [Exemplo método contiguo](./images/metodo_contiguo.png)
-    - [O simulador mantém uma tabela com os arquivos alocados e seus blocos](./images/tabela_alocacao.png)
-    - [Quando é clicado em cima do arquivo da tabela, é destacado aonde está localizado esse arquivo](./images/destaque_alocacao.png)
-    - [Para casos onde temos muitos indices alocacados, para facilitar a vizualização é só dar um duplo clique em cima do arquivo na tabela de alocação que o simulador mostra os indices alocados **em ordem**](./images/janela_blocos_alocados.png)
+    - Informe os campos 'Nome do arquivo' e 'Tamanho do Arquivo'. E então clique no botão 'Criar Arquivo'
+      - ![](./images/botoes.png)
+    - Exemplo método contíguo
+      - ![](./images/metodo_contiguo.png)
+    - O simulador mantém uma tabela com os arquivos alocados e seus blocos
+      - ![](./images/tabela_alocacao.png)
+    - Quando é clicado em cima do arquivo da tabela, é destacado aonde está localizado esse arquivo
+      - ![](./images/destaque_alocacao.png)
+    - Para casos onde temos muitos índices alocados, para facilitar a visualização é só dar um duplo clique em cima do arquivo na tabela de alocação que o simulador mostra os índices alocados **em ordem**
+      - ![](./images/janela_blocos_alocados.png)
 4. Exclua arquivos para liberar espaço.
-    - [Para excluir só inserir o nome do arquivo no campo 'Nome do Arquivo', ou clicar em cima do arquivo na tabela de alocação](./images/tabela_alocacao.png)
-    - [E então clicar no botão de 'Excluir Arquivo'](./images/botoes.png)
-5. Caso queira recomeçar do zero, clique em ['Limpar'](./images/botoes.png).
+    - Para excluir, insira o nome do arquivo no campo 'Nome do Arquivo', ou clique em cima do arquivo na tabela de alocação
+      - ![](./images/tabela_alocacao.png)
+    - E então clique no botão de 'Excluir Arquivo'
+      - ![](./images/botoes.png)
+5. Caso queira recomeçar do zero.
+    - Clique em 'Limpar'
+      - ![](./images/botoes.png)
